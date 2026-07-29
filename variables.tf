@@ -1,15 +1,3 @@
-variable "port_client_id" {
-  description = "Port client ID used to authenticate the provider"
-  type        = string
-  sensitive   = true
-}
-
-variable "port_client_secret" {
-  description = "Port client secret used to authenticate the provider"
-  type        = string
-  sensitive   = true
-}
-
 variable "notify_automation_identifier" {
   description = "Identifier for the notify automation (fires automatically, no approval gate)"
   type        = string

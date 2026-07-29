@@ -1,8 +1,10 @@
 # terraform-port-diagnostic-remediation
 
+**Repository:** https://github.com/sce81/terraform-port-diagnostic-remediation
+
 Closes the loop on the self-health diagnostic pipeline: when a `diagnostic_run` entity is updated with `health_status == Critical`, this module notifies the on-call channel automatically, then lets a human trigger an approval-gated remediation action.
 
-This covers the **Notify**, **Human gate**, and **Remediate** stages of Port's self-healing pattern (detect → enrich → diagnose → record → **notify → gate → remediate**), chained after the `diagnostic_run` entity produced by [`terraform-port-diagnostic-workflow`](../terraform-port-diagnostic-workflow) or [`terraform-port-diagnostic-automation`](../terraform-port-diagnostic-automation).
+This covers the **Notify**, **Human gate**, and **Remediate** stages of Port's self-healing pattern (detect → enrich → diagnose → record → **notify → gate → remediate**), chained after the `diagnostic_run` entity produced by [`terraform-port-diagnostic-workflow`](https://github.com/sce81/terraform-port-diagnostic-workflow) or [`terraform-port-diagnostic-automation`](https://github.com/sce81/terraform-port-diagnostic-automation).
 
 **Why two resources:** Port's API rejects `required_approval` on automation-triggered actions (`"Automation with approval is not supported"`). Approval gates only work on self-service actions. So this module splits the stage into what Port actually supports:
 
@@ -23,7 +25,7 @@ The notify automation's message tells a human to go run the remediation action; 
 - Terraform >= 1.0
 - Port Provider >= 2.22.0 (`port-labs/port-labs`)
 - Port API credentials (client ID and secret)
-- `diagnostic_run` blueprint must exist with `health_status` and `remediation_status` properties (see [`terraform-port-diagnostic-run-blueprint`](../terraform-port-diagnostic-run-blueprint))
+- `diagnostic_run` blueprint must exist with `health_status` and `remediation_status` properties (see [`terraform-port-diagnostic-run-blueprint`](https://github.com/sce81/terraform-port-diagnostic-run-blueprint))
 - A webhook endpoint for notifications (e.g. a Slack incoming webhook)
 - A webhook endpoint that performs or dispatches the actual remediation (e.g. a remediation AI agent invoke URL, or a GitHub Actions dispatcher)
 
@@ -31,12 +33,10 @@ The notify automation's message tells a human to go run the remediation action; 
 
 ```hcl
 module "diagnostic_remediation" {
-  source = "../../terraform-port-diagnostic-remediation"
+  source = "github.com/sce81/terraform-port-diagnostic-remediation?ref=1.0.2"
 
-  port_client_id             = var.port_client_id
-  port_client_secret         = var.port_client_secret
-  approval_notification_url  = var.slack_webhook_url
-  remediation_agent_url      = var.remediation_agent_url
+  approval_notification_url = var.slack_webhook_url
+  remediation_agent_url     = var.remediation_agent_url
 }
 ```
 
@@ -44,10 +44,8 @@ module "diagnostic_remediation" {
 
 ```hcl
 module "diagnostic_remediation" {
-  source = "../../terraform-port-diagnostic-remediation"
+  source = "github.com/sce81/terraform-port-diagnostic-remediation?ref=1.0.2"
 
-  port_client_id                      = var.port_client_id
-  port_client_secret                  = var.port_client_secret
   diagnostic_run_blueprint_identifier = "diagnostic_run"
   trigger_health_status                = "Critical"
   require_approval                     = true
@@ -63,12 +61,12 @@ module "diagnostic_remediation" {
 3. **Human gate:** the remediation action is a `DAY-2` self-service action scoped to `diagnostic_run` (`self_service_trigger.blueprint_identifier`), so it appears in that entity's actions menu. With `required_approval = true`, a human must explicitly trigger it and have the run approved before anything executes.
 4. **Remediate + verify/close:** once approved, `webhook_method` invokes the remediation endpoint with the target entity's context, asking it to propose and execute a fix, then write `remediation_status`, `remediation_plan`, and `remediated_at` back onto the `diagnostic_run` entity.
 
+Provider credentials are configured once in the root module's `provider` block and inherited automatically — child modules do not declare or accept `port_client_id`/`port_client_secret`.
+
 ## Inputs
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| `port_client_id` | Port client ID for authentication | `string` | | yes |
-| `port_client_secret` | Port client secret for authentication | `string` | | yes |
 | `notify_automation_identifier` | Identifier for the notify automation | `string` | `"diagnostic_run_notify_critical"` | no |
 | `notify_title` | Title of the notify automation | `string` | `"Notify Critical Diagnostic Run"` | no |
 | `automation_identifier` | Identifier for the human-gated remediation action | `string` | `"diagnostic_run_remediate_critical"` | no |
